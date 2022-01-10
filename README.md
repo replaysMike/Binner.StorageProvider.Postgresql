@@ -1,2 +1,2 @@
 # Binner.StorageProvider.Postgresql
-Postgresql storage provider for Binner
+Postgresql storage provider for [Binner](https://github.com/replaysMike/Binner)
