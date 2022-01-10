@@ -1,5 +1,4 @@
-﻿using Binner.Common.StorageProviders;
-using Binner.Model.Common;
+﻿using Binner.Model.Common;
 using Npgsql;
 using System.Data;
 using System.Data.SqlTypes;
@@ -45,14 +44,14 @@ namespace Binner.StorageProvider.Postgresql
 
         public async Task<long> GetPartsCountAsync(IUserContext userContext)
         {
-            var query = $"SELECT COUNT_BIG(*) FROM Parts WHERE (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT COUNT_BIG(*) FROM dbo.""Parts"" WHERE (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await ExecuteScalarAsync<long>(query, new { UserId = userContext?.UserId });
             return result;
         }
 
         public async Task<decimal> GetPartsValueAsync(IUserContext userContext)
         {
-            var query = $"SELECT SUM(Cost * Quantity) FROM Parts WHERE (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT SUM(""Cost"" * ""Quantity"") FROM dbo.""Parts"" WHERE (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await ExecuteScalarAsync<decimal>(query, new { UserId = userContext?.UserId });
             return result;
         }
@@ -62,24 +61,24 @@ namespace Binner.StorageProvider.Postgresql
             var offsetRecords = (request.Page - 1) * request.Results;
             var sortDirection = request.Direction == SortDirection.Ascending ? "ASC" : "DESC";
             var query =
-$@"SELECT * FROM Parts 
-WHERE Quantity <= LowStockThreshold AND (@UserId IS NULL OR UserId = @UserId)
+$@"SELECT * FROM dbo.""Parts""
+WHERE ""Quantity"" <= ""LowStockThreshold"" AND (@UserId IS NULL OR ""UserId"" = @UserId)
 ORDER BY 
-CASE WHEN @OrderBy IS NULL THEN PartId ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'PartNumber' THEN PartNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'DigikeyPartNumber' THEN DigikeyPartNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'MouserPartNumber' THEN MouserPartNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Cost' THEN Cost ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Quantity' THEN Quantity ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'LowStockThreshold' THEN LowStockThreshold ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'PartTypeId' THEN PartTypeId ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'ProjectId' THEN ProjectId ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Location' THEN Location ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'BinNumber' THEN BinNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'BinNumber2' THEN BinNumber2 ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Manufacturer' THEN Manufacturer ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'ManufacturerPartNumber' THEN ManufacturerPartNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'DateCreatedUtc' THEN DateCreatedUtc ELSE NULL END {sortDirection} 
+CASE WHEN @OrderBy IS NULL THEN ""PartId"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'PartNumber' THEN ""PartNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'DigikeyPartNumber' THEN ""DigikeyPartNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'MouserPartNumber' THEN ""MouserPartNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Cost' THEN ""Cost"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Quantity' THEN ""Quantity"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'LowStockThreshold' THEN ""LowStockThreshold"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'PartTypeId' THEN ""PartTypeId"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'ProjectId' THEN ""ProjectId"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Location' THEN ""Location"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'BinNumber' THEN ""BinNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'BinNumber2' THEN ""BinNumber2"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Manufacturer' THEN ""Manufacturer"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'ManufacturerPartNumber' THEN ""ManufacturerPartNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'DateCreatedUtc' THEN ""DateCreatedUtc"" ELSE NULL END {sortDirection} 
 OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             var result = await SqlQueryAsync<Part>(query, new
             {
@@ -96,8 +95,8 @@ OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
         {
             part.UserId = userContext?.UserId;
             var query =
-$@"INSERT INTO Parts (Quantity, LowStockThreshold, PartNumber, PackageType, MountingTypeId, DigiKeyPartNumber, MouserPartNumber, Description, PartTypeId, ProjectId, Keywords, DatasheetUrl, Location, BinNumber, BinNumber2, UserId, Cost, Manufacturer, ManufacturerPartNumber, LowestCostSupplier, LowestCostSupplierUrl, ProductUrl, ImageUrl, DateCreatedUtc) 
-output INSERTED.PartId 
+$@"INSERT INTO dbo.""Parts"" (""Quantity"", ""LowStockThreshold"", ""PartNumber"", ""PackageType"", ""MountingTypeId"", ""DigiKeyPartNumber"", ""MouserPartNumber"", ""Description"", ""PartTypeId"", ""ProjectId"", ""Keywords"", ""DatasheetUrl"", ""Location"", ""BinNumber"", ""BinNumber2"", ""UserId"", ""Cost"", ""Manufacturer"", ""ManufacturerPartNumber"", ""LowestCostSupplier"", ""LowestCostSupplierUrl"", ""ProductUrl"", ""ImageUrl"", ""DateCreatedUtc"") 
+output INSERTED.""PartId""
 VALUES(@Quantity, @LowStockThreshold, @PartNumber, @PackageType, @MountingTypeId, @DigiKeyPartNumber, @MouserPartNumber, @Description, @PartTypeId, @ProjectId, @Keywords, @DatasheetUrl, @Location, @BinNumber, @BinNumber2, @UserId, @Cost, @Manufacturer, @ManufacturerPartNumber, @LowestCostSupplier, @LowestCostSupplierUrl, @ProductUrl, @ImageUrl, @DateCreatedUtc);
 ";
             return await InsertAsync<Part, long>(query, part, (x, key) => { x.PartId = key; });
@@ -107,8 +106,8 @@ VALUES(@Quantity, @LowStockThreshold, @PartNumber, @PackageType, @MountingTypeId
         {
             project.UserId = userContext?.UserId;
             var query =
-$@"INSERT INTO Projects (Name, Description, Location, Color, UserId, DateCreatedUtc) 
-output INSERTED.ProjectId 
+$@"INSERT INTO dbo.""Projects"" (Name, Description, Location, Color, UserId, DateCreatedUtc) 
+output INSERTED.""ProjectId""
 VALUES(@Name, @Description, @Location, @Color, @UserId, @DateCreatedUtc);
 ";
             return await InsertAsync<Project, long>(query, project, (x, key) => { x.ProjectId = key; });
@@ -117,21 +116,21 @@ VALUES(@Name, @Description, @Location, @Color, @UserId, @DateCreatedUtc);
         public async Task<bool> DeletePartAsync(Part part, IUserContext userContext)
         {
             part.UserId = userContext?.UserId;
-            var query = $"DELETE FROM Parts WHERE PartId = @PartId AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"DELETE FROM dbo.""Parts"" WHERE ""PartId"" = @PartId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             return await ExecuteAsync<Part>(query, part) > 0;
         }
 
         public async Task<bool> DeletePartTypeAsync(PartType partType, IUserContext userContext)
         {
             partType.UserId = userContext?.UserId;
-            var query = $"DELETE FROM PartTypes WHERE PartTypeId = @PartTypeId AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"DELETE FROM dbo.""PartTypes"" WHERE ""PartTypeId"" = @PartTypeId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             return await ExecuteAsync<PartType>(query, partType) > 0;
         }
 
         public async Task<bool> DeleteProjectAsync(Project project, IUserContext userContext)
         {
             project.UserId = userContext?.UserId;
-            var query = $"DELETE FROM Projects WHERE ProjectId = @ProjectId AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"DELETE FROM dbo.""Projects"" WHERE ""ProjectId"" = @ProjectId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             return await ExecuteAsync<Project>(query, project) > 0;
         }
 
@@ -139,57 +138,57 @@ VALUES(@Name, @Description, @Location, @Color, @UserId, @DateCreatedUtc);
         {
             // basic ranked search by Michael Brown :)
             var query =
-$@"WITH PartsExactMatch (PartId, Rank) AS
+$@"WITH ""PartsExactMatch"" (""PartId"", ""Rank"") AS
 (
-SELECT PartId, 10 as Rank FROM Parts WHERE (@UserId IS NULL OR UserId = @UserId) AND 
-PartNumber = @Keywords 
-OR DigiKeyPartNumber = @Keywords 
-OR MouserPartNumber = @Keywords
-OR ManufacturerPartNumber = @Keywords
-OR Description = @Keywords 
-OR Keywords = @Keywords 
-OR Location = @Keywords 
-OR BinNumber = @Keywords 
-OR BinNumber2 = @Keywords
+SELECT ""PartId"", 10 as ""Rank"" FROM dbo.""Parts"" WHERE (@UserId IS NULL OR ""UserId"" = @UserId) AND 
+""PartNumber"" = @Keywords 
+OR ""DigiKeyPartNumber"" = @Keywords 
+OR ""MouserPartNumber"" = @Keywords
+OR ""ManufacturerPartNumber"" = @Keywords
+OR ""Description"" = @Keywords 
+OR ""Keywords"" = @Keywords 
+OR ""Location"" = @Keywords 
+OR ""BinNumber"" = @Keywords 
+OR ""BinNumber2"" = @Keywords
 ),
-PartsBeginsWith (PartId, Rank) AS
+""PartsBeginsWith"" (""PartId"", ""Rank"") AS
 (
-SELECT PartId, 100 as Rank FROM Parts WHERE (@UserId IS NULL OR UserId = @UserId) AND 
-PartNumber LIKE @Keywords + '%'
-OR DigiKeyPartNumber LIKE @Keywords + '%'
-OR MouserPartNumber LIKE @Keywords + '%'
-OR ManufacturerPartNumber LIKE @Keywords + '%'
-OR Description LIKE @Keywords + '%'
-OR Keywords LIKE @Keywords + '%'
-OR Location LIKE @Keywords + '%'
-OR BinNumber LIKE @Keywords + '%'
-OR BinNumber2 LIKE @Keywords+ '%'
+SELECT ""PartId"", 100 as ""Rank"" FROM dbo.""Parts"" WHERE (@UserId IS NULL OR ""UserId"" = @UserId) AND 
+""PartNumber"" LIKE @Keywords + '%'
+OR ""DigiKeyPartNumber"" LIKE @Keywords + '%'
+OR ""MouserPartNumber"" LIKE @Keywords + '%'
+OR ""ManufacturerPartNumber"" LIKE @Keywords + '%'
+OR ""Description"" LIKE @Keywords + '%'
+OR ""Keywords"" LIKE @Keywords + '%'
+OR ""Location"" LIKE @Keywords + '%'
+OR ""BinNumber"" LIKE @Keywords + '%'
+OR ""BinNumber2"" LIKE @Keywords+ '%'
 ),
-PartsAny (PartId, Rank) AS
+""PartsAny"" (""PartId"", ""Rank"") AS
 (
-SELECT PartId, 200 as Rank FROM Parts WHERE (@UserId IS NULL OR UserId = @UserId) AND 
-PartNumber LIKE '%' + @Keywords + '%'
-OR DigiKeyPartNumber LIKE '%' + @Keywords + '%'
-OR MouserPartNumber LIKE '%' + @Keywords + '%'
-OR ManufacturerPartNumber LIKE '%' + @Keywords + '%'
-OR Description LIKE '%' + @Keywords + '%'
-OR Keywords LIKE '%' + @Keywords + '%'
-OR Location LIKE '%' + @Keywords + '%'
-OR BinNumber LIKE '%' + @Keywords + '%'
-OR BinNumber2 LIKE '%' + @Keywords + '%'
+SELECT ""PartId"", 200 as ""Rank"" FROM dbo.""Parts"" WHERE (@UserId IS NULL OR ""UserId"" = @UserId) AND 
+""PartNumber"" LIKE '%' + @Keywords + '%'
+OR ""DigiKeyPartNumber"" LIKE '%' + @Keywords + '%'
+OR ""MouserPartNumber"" LIKE '%' + @Keywords + '%'
+OR ""ManufacturerPartNumber"" LIKE '%' + @Keywords + '%'
+OR ""Description"" LIKE '%' + @Keywords + '%'
+OR ""Keywords"" LIKE '%' + @Keywords + '%'
+OR ""Location"" LIKE '%' + @Keywords + '%'
+OR ""BinNumber"" LIKE '%' + @Keywords + '%'
+OR ""BinNumber2"" LIKE '%' + @Keywords + '%'
 ),
-PartsMerged (PartId, Rank) AS
+""PartsMerged"" (""PartId"", ""Rank"") AS
 (
-	SELECT PartId, Rank FROM PartsExactMatch
+	SELECT ""PartId"", ""Rank"" FROM ""PartsExactMatch""
 	UNION
-	SELECT PartId, Rank FROM PartsBeginsWith
+	SELECT ""PartId"", ""Rank"" FROM ""PartsBeginsWith""
 	UNION
-	SELECT PartId, Rank FROM PartsAny
+	SELECT ""PartId"", ""Rank"" FROM ""PartsAny""
 )
-SELECT pm.Rank, p.* FROM Parts p
+SELECT pm.""Rank"", p.* FROM dbo.""Parts"" p
 INNER JOIN (
-  SELECT PartId, MIN(Rank) Rank FROM PartsMerged GROUP BY PartId
-) pm ON pm.PartId = p.PartId ORDER BY pm.Rank ASC;
+  SELECT ""PartId"", MIN(""Rank"") ""Rank"" FROM ""PartsMerged"" GROUP BY ""PartId""
+) pm ON pm.""PartId"" = p.""PartId"" ORDER BY pm.""Rank"" ASC;
 ;";
             var result = await SqlQueryAsync<PartSearch>(query, new { Keywords = keywords, UserId = userContext?.UserId });
             return result.Select(x => new SearchResult<Part>(x as Part, x.Rank)).OrderBy(x => x.Rank).ToList();
@@ -197,14 +196,14 @@ INNER JOIN (
 
         private async Task<ICollection<OAuthCredential>> GetOAuthCredentialAsync()
         {
-            var query = $"SELECT * FROM OAuthCredentials;";
+            var query = @$"SELECT * FROM dbo.""OAuthCredentials"";";
             var result = await SqlQueryAsync<OAuthCredential>(query);
             return result;
         }
 
         public async Task<OAuthCredential> GetOAuthCredentialAsync(string providerName, IUserContext userContext)
         {
-            var query = $"SELECT * FROM OAuthCredentials WHERE Provider = @ProviderName AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT * FROM dbo.""OAuthCredentials"" WHERE ""Provider"" = @ProviderName AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<OAuthCredential>(query, new { ProviderName = providerName, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
@@ -212,7 +211,7 @@ INNER JOIN (
         public async Task<PartType> GetOrCreatePartTypeAsync(PartType partType, IUserContext userContext)
         {
             partType.UserId = userContext?.UserId;
-            var query = $"SELECT PartTypeId FROM PartTypes WHERE Name = @Name AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT ""PartTypeId"" FROM dbo.""PartTypes"" WHERE ""Name"" = @Name AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<PartType>(query, partType);
             if (result.Any())
             {
@@ -221,8 +220,8 @@ INNER JOIN (
             else
             {
                 query =
-$@"INSERT INTO PartTypes (ParentPartTypeId, Name, UserId, DateCreatedUtc) 
-output INSERTED.PartTypeId 
+$@"INSERT INTO dbo.""PartTypes"" (""ParentPartTypeId"", ""Name"", ""UserId"", ""DateCreatedUtc"") 
+output INSERTED.""PartTypeId""
 VALUES (@ParentPartTypeId, @Name, @UserId, @DateCreatedUtc);";
                 partType = await InsertAsync<PartType, long>(query, partType, (x, key) => { x.PartTypeId = key; });
             }
@@ -231,35 +230,35 @@ VALUES (@ParentPartTypeId, @Name, @UserId, @DateCreatedUtc);";
 
         private async Task<ICollection<PartType>> GetPartTypesAsync()
         {
-            var query = $"SELECT * FROM PartTypes;";
+            var query = @$"SELECT * FROM dbo.""PartTypes"";";
             var result = await SqlQueryAsync<PartType>(query);
             return result;
         }
 
         public async Task<ICollection<PartType>> GetPartTypesAsync(IUserContext userContext)
         {
-            var query = $"SELECT * FROM PartTypes WHERE (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT * FROM dbo.""PartTypes"" WHERE (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<PartType>(query, new { UserId = userContext?.UserId });
             return result.ToList();
         }
 
         public async Task<Part> GetPartAsync(long partId, IUserContext userContext)
         {
-            var query = $"SELECT * FROM Parts WHERE PartId = @PartId AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT * FROM dbo.""Parts"" WHERE ""PartId"" = @PartId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Part>(query, new { PartId = partId, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
         public async Task<Part> GetPartAsync(string partNumber, IUserContext userContext)
         {
-            var query = $"SELECT * FROM Parts WHERE PartNumber = @PartNumber AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT * FROM dbo.""Parts"" WHERE ""PartNumber"" = @PartNumber AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Part>(query, new { PartNumber = partNumber, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
         private async Task<ICollection<Part>> GetPartsAsync()
         {
-            var query = $"SELECT * FROM Parts;";
+            var query = @$"SELECT * FROM dbo.""Parts"";";
             var result = await SqlQueryAsync<Part>(query);
             return result;
         }
@@ -267,7 +266,7 @@ VALUES (@ParentPartTypeId, @Name, @UserId, @DateCreatedUtc);";
         public async Task<ICollection<Part>> GetPartsAsync(Expression<Func<Part, bool>> predicate, IUserContext userContext)
         {
             var conditionalQuery = TranslatePredicateToSql(predicate);
-            var query = $"SELECT * FROM Parts WHERE {conditionalQuery.Sql} AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT * FROM dbo.""Parts"" WHERE {conditionalQuery.Sql} AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             conditionalQuery.Parameters.Add("UserId", userContext?.UserId);
             var result = await SqlQueryAsync<Part>(query, conditionalQuery.Parameters);
             return result.ToList();
@@ -293,24 +292,24 @@ VALUES (@ParentPartTypeId, @Name, @UserId, @DateCreatedUtc);";
             }
 
             var query =
-$@"SELECT * FROM Parts 
-WHERE (@UserId IS NULL OR UserId = @UserId) {binFilter}
+$@"SELECT * FROM dbo.""Parts""
+WHERE (@UserId IS NULL OR ""UserId"" = @UserId) {binFilter}
 ORDER BY 
-CASE WHEN @OrderBy IS NULL THEN PartId ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'PartNumber' THEN PartNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'DigikeyPartNumber' THEN DigikeyPartNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'MouserPartNumber' THEN MouserPartNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Cost' THEN Cost ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Quantity' THEN Quantity ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'LowStockThreshold' THEN LowStockThreshold ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'PartTypeId' THEN PartTypeId ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'ProjectId' THEN ProjectId ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Location' THEN Location ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'BinNumber' THEN BinNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'BinNumber2' THEN BinNumber2 ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Manufacturer' THEN Manufacturer ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'ManufacturerPartNumber' THEN ManufacturerPartNumber ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'DateCreatedUtc' THEN DateCreatedUtc ELSE NULL END {sortDirection} 
+CASE WHEN @OrderBy IS NULL THEN ""PartId"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'PartNumber' THEN ""PartNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'DigikeyPartNumber' THEN ""DigikeyPartNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'MouserPartNumber' THEN ""MouserPartNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Cost' THEN ""Cost"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Quantity' THEN ""Quantity"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'LowStockThreshold' THEN ""LowStockThreshold"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'PartTypeId' THEN ""PartTypeId"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'ProjectId' THEN ""ProjectId"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Location' THEN ""Location"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'BinNumber' THEN ""BinNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'BinNumber2' THEN ""BinNumber2"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Manufacturer' THEN ""Manufacturer"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'ManufacturerPartNumber' THEN ""ManufacturerPartNumber"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'DateCreatedUtc' THEN ""DateCreatedUtc"" ELSE NULL END {sortDirection} 
 OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             var result = await SqlQueryAsync<Part>(query, new
             {
@@ -325,28 +324,28 @@ OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
 
         public async Task<PartType> GetPartTypeAsync(long partTypeId, IUserContext userContext)
         {
-            var query = $"SELECT * FROM PartTypes WHERE PartTypeId = @PartTypeId AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT * FROM dbo.""PartTypes"" WHERE ""PartTypeId"" = @PartTypeId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<PartType>(query, new { PartTypeId = partTypeId, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
         public async Task<Project> GetProjectAsync(long projectId, IUserContext userContext)
         {
-            var query = $"SELECT * FROM Projects WHERE ProjectId = @ProjectId AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT * FROM dbo.""Projects"" WHERE ""ProjectId"" = @ProjectId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Project>(query, new { ProjectId = projectId, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
         public async Task<Project> GetProjectAsync(string projectName, IUserContext userContext)
         {
-            var query = $"SELECT * FROM Projects WHERE Name = @Name AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT * FROM dbo.""Projects"" WHERE ""Name"" = @Name AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Project>(query, new { Name = projectName, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
         private async Task<ICollection<Project>> GetProjectsAsync()
         {
-            var query = $@"SELECT * FROM Projects;";
+            var query = @$"SELECT * FROM dbo.""Projects"";";
             var result = await SqlQueryAsync<Project>(query);
             return result;
         }
@@ -356,14 +355,14 @@ OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             var offsetRecords = (request.Page - 1) * request.Results;
             var sortDirection = request.Direction == SortDirection.Ascending ? "ASC" : "DESC";
             var query =
-$@"SELECT * FROM Projects 
-WHERE (@UserId IS NULL OR UserId = @UserId) 
+$@"SELECT * FROM dbo.""Projects"" 
+WHERE (@UserId IS NULL OR ""UserId"" = @UserId) 
 ORDER BY 
-CASE WHEN @OrderBy IS NULL THEN ProjectId ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Name' THEN Name ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Description' THEN Description ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'Location' THEN Location ELSE NULL END {sortDirection}, 
-CASE WHEN @OrderBy = 'DateCreatedUtc' THEN DateCreatedUtc ELSE NULL END {sortDirection} 
+CASE WHEN @OrderBy IS NULL THEN ""ProjectId"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Name' THEN ""Name"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Description' THEN ""Description"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'Location' THEN ""Location"" ELSE NULL END {sortDirection}, 
+CASE WHEN @OrderBy = 'DateCreatedUtc' THEN ""DateCreatedUtc"" ELSE NULL END {sortDirection} 
 OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             var result = await SqlQueryAsync<Project>(query, new
             {
@@ -378,24 +377,24 @@ OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
 
         public async Task RemoveOAuthCredentialAsync(string providerName, IUserContext userContext)
         {
-            var query = $"DELETE FROM OAuthCredentials WHERE Provider = @Provider AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"DELETE FROM dbo.""OAuthCredentials"" WHERE ""Provider"" = @Provider AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             await ExecuteAsync<object>(query, new { Provider = providerName, UserId = userContext?.UserId });
         }
 
         public async Task<OAuthCredential> SaveOAuthCredentialAsync(OAuthCredential credential, IUserContext userContext)
         {
             credential.UserId = userContext?.UserId;
-            var query = @"SELECT Provider FROM OAuthCredentials WHERE Provider = @Provider AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @"SELECT ""Provider"" FROM dbo.""OAuthCredentials"" WHERE ""Provider"" = @Provider AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<OAuthCredential>(query, credential);
             if (result.Any())
             {
-                query = $@"UPDATE OAuthCredentials SET AccessToken = @AccessToken, RefreshToken = @RefreshToken, DateCreatedUtc = @DateCreatedUtc, DateExpiresUtc = @DateExpiresUtc WHERE Provider = @Provider AND (@UserId IS NULL OR UserId = @UserId);";
+                query = $@"UPDATE dbo.""OAuthCredentials"" SET ""AccessToken"" = @AccessToken, ""RefreshToken"" = @RefreshToken, ""DateCreatedUtc"" = @DateCreatedUtc, ""DateExpiresUtc"" = @DateExpiresUtc WHERE ""Provider"" = @Provider AND (@UserId IS NULL OR ""UserId"" = @UserId);";
                 await ExecuteAsync<object>(query, credential);
             }
             else
             {
                 query =
-$@"INSERT INTO OAuthCredentials (Provider, AccessToken, RefreshToken, DateCreatedUtc, DateExpiresUtc, UserId) 
+$@"INSERT INTO dbo.""OAuthCredentials"" (""Provider"", ""AccessToken"", ""RefreshToken"", ""DateCreatedUtc"", ""DateExpiresUtc"", ""UserId"") 
 VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc, @UserId);";
                 await InsertAsync<OAuthCredential, string>(query, credential, (x, key) => { });
             }
@@ -405,11 +404,11 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
         public async Task<Part> UpdatePartAsync(Part part, IUserContext userContext)
         {
             part.UserId = userContext?.UserId;
-            var query = $"SELECT PartId FROM Parts WHERE PartId = @PartId AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT ""PartId"" FROM dbo.""Parts"" WHERE ""PartId"" = @PartId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Part>(query, part);
             if (result.Any())
             {
-                query = $"UPDATE Parts SET Quantity = @Quantity, LowStockThreshold = @LowStockThreshold, Cost = @Cost, PartNumber = @PartNumber, PackageType = @PackageType, MountingTypeId = @MountingTypeId, DigiKeyPartNumber = @DigiKeyPartNumber, MouserPartNumber = @MouserPartNumber, Description = @Description, PartTypeId = @PartTypeId, ProjectId = @ProjectId, Keywords = @Keywords, DatasheetUrl = @DatasheetUrl, Location = @Location, BinNumber = @BinNumber, BinNumber2 = @BinNumber2, ProductUrl = @ProductUrl, ImageUrl = @ImageUrl, LowestCostSupplier = @LowestCostSupplier, LowestCostSupplierUrl = @LowestCostSupplierUrl, Manufacturer = @Manufacturer, ManufacturerPartNumber = @ManufacturerPartNumber WHERE PartId = @PartId AND (@UserId IS NULL OR UserId = @UserId);";
+                query = @$"UPDATE dbo.""Parts"" SET ""Quantity"" = @Quantity, ""LowStockThreshold"" = @LowStockThreshold, ""Cost"" = @Cost, ""PartNumber"" = @PartNumber, ""PackageType"" = @PackageType, ""MountingTypeId"" = @MountingTypeId, ""DigiKeyPartNumber"" = @DigiKeyPartNumber, ""MouserPartNumber"" = @MouserPartNumber, ""Description"" = @Description, ""PartTypeId"" = @PartTypeId, ""ProjectId"" = @ProjectId, ""Keywords"" = @Keywords, ""DatasheetUrl"" = @DatasheetUrl, ""Location"" = @Location, ""BinNumber"" = @BinNumber, ""BinNumber2"" = @BinNumber2, ""ProductUrl"" = @ProductUrl, ""ImageUrl"" = @ImageUrl, ""LowestCostSupplier"" = @LowestCostSupplier, ""LowestCostSupplierUrl"" = @LowestCostSupplierUrl, ""Manufacturer"" = @Manufacturer, ""ManufacturerPartNumber"" = @ManufacturerPartNumber WHERE ""PartId"" = @PartId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
                 await ExecuteAsync<Part>(query, part);
             }
             else
@@ -422,11 +421,11 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
         public async Task<PartType> UpdatePartTypeAsync(PartType partType, IUserContext userContext)
         {
             partType.UserId = userContext?.UserId;
-            var query = $"SELECT PartTypeId FROM PartTypes WHERE PartTypeId = @PartTypeId AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT ""PartTypeId"" FROM dbo.""PartTypes"" WHERE ""PartTypeId"" = @PartTypeId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<PartType>(query, partType);
             if (result.Any())
             {
-                query = $"UPDATE PartTypes SET Name = @Name, ParentPartTypeId = @ParentPartTypeId WHERE PartTypeId = @PartTypeId AND (@UserId IS NULL OR UserId = @UserId);";
+                query = @$"UPDATE dbo.""PartTypes"" SET ""Name"" = @Name, ""ParentPartTypeId"" = @ParentPartTypeId WHERE ""PartTypeId"" = @PartTypeId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
                 await ExecuteAsync<PartType>(query, partType);
             }
             else
@@ -439,11 +438,11 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
         public async Task<Project> UpdateProjectAsync(Project project, IUserContext userContext)
         {
             project.UserId = userContext?.UserId;
-            var query = $"SELECT ProjectId FROM Projects WHERE ProjectId = @ProjectId AND (@UserId IS NULL OR UserId = @UserId);";
+            var query = @$"SELECT ""ProjectId"" FROM dbo.""Projects"" WHERE ""ProjectId"" = @ProjectId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Project>(query, project);
             if (result.Any())
             {
-                query = $"UPDATE Projects SET Name = @Name, Description = @Description, Location = @Location, Color = @Color WHERE ProjectId = @ProjectId AND (@UserId IS NULL OR UserId = @UserId);";
+                query = @$"UPDATE dbo.""Projects"" SET ""Name"" = @Name, ""Description"" = @Description, ""Location"" = @Location, ""Color"" = @Color WHERE ""ProjectId"" = @ProjectId AND (@UserId IS NULL OR ""UserId"" = @UserId);";
                 await ExecuteAsync<Project>(query, project);
             }
             else
@@ -643,7 +642,7 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
             var modified = 0;
             foreach (var partType in defaultPartTypes.EnumValues)
             {
-                query += $"INSERT INTO PartTypes (Name, DateCreatedUtc) VALUES('{partType.Value}', GETUTCDATE());\r\n";
+                query += @$"INSERT INTO dbo.""PartTypes"" (""Name"", ""DateCreatedUtc"") VALUES('{partType.Value}', GETUTCDATE());\r\n";
             }
             using (var connection = new NpgsqlConnection(_config.ConnectionString))
             {
