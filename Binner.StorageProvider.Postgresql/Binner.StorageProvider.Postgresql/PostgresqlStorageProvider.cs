@@ -20,7 +20,16 @@ namespace Binner.StorageProvider.Postgresql
         public PostgresqlStorageProvider(IDictionary<string, string> config)
         {
             _config = new PostgresqlStorageConfiguration(config);
-            Task.Run(async () => await GenerateDatabaseIfNotExistsAsync<IBinnerDb>()).GetAwaiter().GetResult();
+            try
+            {
+                GenerateDatabaseIfNotExistsAsync<IBinnerDb>()
+                    .GetAwaiter()
+                    .GetResult();
+            }
+            catch (Exception ex)
+            {
+                throw new StorageProviderException(nameof(PostgresqlStorageProvider), $"Failed to generate database! {ex.GetType().Name} = {ex.Message}", ex);
+            }
         }
 
         /// <summary>
@@ -275,7 +284,7 @@ VALUES (@ParentPartTypeId, @Name, @UserId, @DateCreatedUtc);";
         private WhereCondition TranslatePredicateToSql(Expression<Func<Part, bool>> predicate)
         {
             var builder = new SqlWhereExpressionBuilder();
-            
+
             var sql = builder.ToParameterizedSql<Part>(predicate);
             return sql;
         }
@@ -413,7 +422,7 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
             }
             else
             {
-                throw new ArgumentException($"Record not found for {nameof(Part)} = {part.PartId}");
+                throw new StorageProviderException(nameof(PostgresqlStorageProvider), $"Record not found for {nameof(Part)} = {part.PartId}");
             }
             return part;
         }
@@ -430,7 +439,7 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
             }
             else
             {
-                throw new ArgumentException($"Record not found for {nameof(PartType)} = {partType.PartTypeId}");
+                throw new StorageProviderException(nameof(PostgresqlStorageProvider), $"Record not found for {nameof(PartType)} = {partType.PartTypeId}");
             }
             return partType;
         }
@@ -447,7 +456,7 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
             }
             else
             {
-                throw new ArgumentException($"Record not found for {nameof(Project)} = {project.ProjectId}");
+                throw new StorageProviderException(nameof(PostgresqlStorageProvider), $"Record not found for {nameof(Project)} = {project.ProjectId}");
             }
             return project;
         }
@@ -488,8 +497,11 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
                         var newObj = Activator.CreateInstance<T>();
                         foreach (var prop in type.Properties)
                         {
-                            var val = MapToPropertyValue(reader[prop.Name], prop.Type);
-                            newObj.SetPropertyValue(prop.PropertyInfo, val);
+                            if (reader.HasColumn(prop.Name))
+                            {
+                                var val = MapToPropertyValue(reader[prop.Name], prop.Type);
+                                newObj.SetPropertyValue(prop.PropertyInfo, val);
+                            }
                         }
                         results.Add(newObj);
                     }
@@ -600,36 +612,30 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
             var connectionStringBuilder = new NpgsqlConnectionStringBuilder(_config.ConnectionString);
             var schemaGenerator = new PostgresqlServerSchemaGenerator<T>(connectionStringBuilder.Database ?? string.Empty);
             var modified = 0;
-            try
+
+            // Ensure database exists
+            var query = schemaGenerator.CreateDatabaseIfNotExists();
+            using (var connection = new NpgsqlConnection(GetMasterDbConnectionString(_config.ConnectionString)))
             {
-                // Ensure database exists
-                var query = schemaGenerator.CreateDatabaseIfNotExists();
-                using (var connection = new NpgsqlConnection(GetMasterDbConnectionString(_config.ConnectionString)))
+                connection.Open();
+                using (var sqlCmd = new NpgsqlCommand(query, connection))
                 {
-                    connection.Open();
-                    using (var sqlCmd = new NpgsqlCommand(query, connection))
-                    {
-                        modified = (int)await sqlCmd.ExecuteScalarAsync();
-                    }
-                    connection.Close();
+                    modified = (int)await sqlCmd.ExecuteScalarAsync();
                 }
-                // Ensure table schema exists
-                query = schemaGenerator.CreateTableSchemaIfNotExists();
-                using (var connection = new NpgsqlConnection(_config.ConnectionString))
-                {
-                    connection.Open();
-                    using (var sqlCmd = new NpgsqlCommand(query, connection))
-                    {
-                        modified = (int)await sqlCmd.ExecuteScalarAsync();
-                    }
-                    connection.Close();
-                }
-                if (modified > 0) await SeedInitialDataAsync();
+                connection.Close();
             }
-            catch (Exception)
+            // Ensure table schema exists
+            query = schemaGenerator.CreateTableSchemaIfNotExists();
+            using (var connection = new NpgsqlConnection(_config.ConnectionString))
             {
-                throw;
+                connection.Open();
+                using (var sqlCmd = new NpgsqlCommand(query, connection))
+                {
+                    modified = (int)await sqlCmd.ExecuteScalarAsync();
+                }
+                connection.Close();
             }
+            if (modified > 0) await SeedInitialDataAsync();
 
             return modified > 0;
         }
