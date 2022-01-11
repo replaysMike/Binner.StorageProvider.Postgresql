@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Binner.Model.Common;
+using System.ComponentModel.DataAnnotations;
 using TypeSupport;
 using TypeSupport.Extensions;
 
@@ -7,114 +8,113 @@ namespace Binner.StorageProvider.Postgresql
     public class PostgresqlServerSchemaGenerator<T>
     {
         private string _dbName;
-        private ExtendedType _dbType;
         private ICollection<ExtendedProperty> _tables;
 
         public PostgresqlServerSchemaGenerator(string databaseName)
         {
             _dbName = databaseName;
-            _dbType = typeof(T).GetExtendedType();
             var properties = typeof(T).GetProperties(PropertyOptions.HasGetter);
-            _tables = properties.Where(x => x.Type.GetExtendedType().IsCollection).ToList();
+            _tables = properties.Where(x => x.Type.IsCollection).ToList();
         }
 
         public string CreateDatabaseIfNotExists()
-        {
-            return $@"
-DECLARE @dbCreated INT = 0;
-IF (db_id(N'{_dbName}') IS NULL)
-BEGIN
-    CREATE DATABASE {_dbName};
-    SET @dbCreated = 1;
-END
-SELECT @dbCreated;
-";
-        }
+            => $@"CREATE DATABASE {Quote(_dbName)}";
 
-        public string CreateTableSchemaIfNotExists()
-        {
-            return $@"
-USE {_dbName};
--- create tables
-DECLARE @tablesCreated INT = 0;
-{string.Join("\r\n", GetTableSchemas())}
-SELECT @tablesCreated;
-";
-        }
+        public string CreateTableSchemaIfNotExists() => $@"CREATE SCHEMA IF NOT EXISTS dbo;
+{string.Join("\r\n", GetTableSchemas())}";
 
         private ICollection<string> GetTableSchemas()
         {
             var tableSchemas = new List<string>();
             foreach (var tableProperty in _tables)
             {
-                var tableExtendedType = tableProperty.Type.GetExtendedType();
+                var tableExtendedType = tableProperty.Type;
                 var columnProps = tableExtendedType.ElementType.GetProperties(PropertyOptions.HasGetter);
                 var tableSchema = new List<string>();
+                var tablePostSchemaText = new List<string>();
                 foreach (var columnProp in columnProps)
-                    tableSchema.Add(GetColumnSchema(columnProp));
-                tableSchemas.Add(CreateTableIfNotExists(tableProperty.Name, string.Join(",\r\n", tableSchema)));
+                {
+                    tableSchema.Add(GetColumnSchema(tableProperty.Name, columnProp, out var postSchemaText, out var preTableText));
+                    tablePostSchemaText.AddRange(postSchemaText);
+                    if (preTableText.Any())
+                        tableSchemas.Add(string.Join("\r\n", preTableText));
+                }
+                tableSchemas.Add(CreateTableIfNotExists(tableProperty.Name, string.Join(",\r\n", tableSchema), tablePostSchemaText));
             }
             return tableSchemas;
         }
 
-        private string GetColumnSchema(ExtendedProperty prop)
+        private string GetColumnSchema(string tableName, ExtendedProperty prop, out List<string> postSchemaText, out List<string> preTableText)
         {
+            postSchemaText = new List<string>();
+            preTableText = new List<string>();
             var columnSchema = "";
-            var propExtendedType = prop.Type.GetExtendedType();
-            var maxLength = GetMaxLength(prop);
+            var propExtendedType = prop.Type;
             if (propExtendedType.IsCollection)
             {
                 // store as string, data will be comma delimited
-                columnSchema = $"{prop.Name} nvarchar({maxLength})";
+                columnSchema = @$"{Quote(prop.Name)} text";
             }
             else
             {
+                columnSchema = @$"{Quote(prop.Name)} ";
                 switch (propExtendedType)
                 {
                     case var p when p.NullableBaseType == typeof(byte):
-                        columnSchema = $"{prop.Name} tinyint";
+                        columnSchema += "char";
                         break;
                     case var p when p.NullableBaseType == typeof(short):
-                        columnSchema = $"{prop.Name} smallint";
+                        columnSchema += "smallint";
                         break;
                     case var p when p.NullableBaseType == typeof(int):
-                        columnSchema = $"{prop.Name} integer";
+                        columnSchema += "integer";
                         break;
                     case var p when p.NullableBaseType == typeof(long):
-                        columnSchema = $"{prop.Name} bigint";
+                        columnSchema += "bigint";
                         break;
                     case var p when p.NullableBaseType == typeof(double):
-                        columnSchema = $"{prop.Name} float";
+                        columnSchema += "float8";
                         break;
                     case var p when p.NullableBaseType == typeof(decimal):
-                        columnSchema = $"{prop.Name} decimal(18, 3)";
+                        columnSchema += "decimal(18, 3)";
                         break;
                     case var p when p.NullableBaseType == typeof(string):
-                        columnSchema = $"{prop.Name} nvarchar({maxLength})";
+                        columnSchema += $"text";
                         break;
                     case var p when p.NullableBaseType == typeof(DateTime):
-                        columnSchema = $"{prop.Name} datetime";
+                        columnSchema += "timestamp";
                         break;
                     case var p when p.NullableBaseType == typeof(TimeSpan):
-                        columnSchema = $"{prop.Name} time";
+                        columnSchema = "interval";
                         break;
                     case var p when p.NullableBaseType == typeof(byte[]):
-                        columnSchema = $"{prop.Name} varbinary({maxLength})";
+                        columnSchema = "bytea";
                         break;
                     default:
-                        throw new InvalidOperationException($"Unsupported data type: {prop.Type}");
+                        throw new StorageProviderException($"Unsupported data type: {prop.Type}");
                 }
             }
             if (prop.CustomAttributes.ToList().Any(x => x.AttributeType == typeof(KeyAttribute)))
             {
                 if (propExtendedType.NullableBaseType != typeof(string) && propExtendedType.NullableBaseType.IsValueType)
-                    columnSchema = columnSchema + " IDENTITY";
-                columnSchema = columnSchema + " PRIMARY KEY NOT NULL";
+                {
+                    // add auto-increment key
+                    var sequenceName = Quote(tableName + "_" + prop.Name + "_seq");
+                    columnSchema += $" DEFAULT nextval('dbo.{sequenceName}'::regclass)";
+                    preTableText.Add(@$"CREATE SEQUENCE IF NOT EXISTS dbo.{sequenceName}
+start 1
+increment 1;
+");
+                }
+                columnSchema = columnSchema + " NOT NULL";
+                postSchemaText.Add(@$", CONSTRAINT ""{tableName}_pkey"" PRIMARY KEY ({Quote(prop.Name)})");
             }
             else if (propExtendedType.Type != typeof(string) && !propExtendedType.IsNullable && !propExtendedType.IsCollection)
                 columnSchema = columnSchema + " NOT NULL";
             return columnSchema;
         }
+
+        internal static string Quote(string txt) => @$"""{txt}""";
 
         private string GetMaxLength(ExtendedProperty prop)
         {
@@ -127,15 +127,15 @@ SELECT @tablesCreated;
             return maxLength;
         }
 
-        private string CreateTableIfNotExists(string tableName, string tableSchema)
+        private string CreateTableIfNotExists(string tableName, string tableSchema, List<string> postSchemaText)
         {
-            return $@"IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='{tableName}' and xtype='U')
-BEGIN
-    CREATE TABLE {tableName} (
-        {tableSchema}
-    );
-   SET @tablesCreated = @tablesCreated + 1;
-END";
+            var createTable = $@"CREATE TABLE IF NOT EXISTS dbo.{Quote(tableName)} (
+{tableSchema}
+";
+            if (postSchemaText.Any())
+                createTable += $"{string.Join("\r\n", postSchemaText)}";
+            createTable += "\r\n);\r\n";
+            return createTable;
         }
     }
 }

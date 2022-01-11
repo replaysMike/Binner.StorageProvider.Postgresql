@@ -620,7 +620,22 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
                 connection.Open();
                 using (var sqlCmd = new NpgsqlCommand(query, connection))
                 {
-                    modified = (int)await sqlCmd.ExecuteScalarAsync();
+                    try
+                    {
+                        await sqlCmd.ExecuteNonQueryAsync();
+                        modified++;
+                    }
+                    catch (PostgresException ex)
+                    {
+                        if (ex.Message.Contains("already exists"))
+                        {
+                            // database already exists, do nothing
+                        }
+                        else
+                        {
+                            throw new StorageProviderException(nameof(PostgresqlStorageProvider), "Error creating database! See inner exception for details.", ex);
+                        }
+                    }
                 }
                 connection.Close();
             }
@@ -631,7 +646,15 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
                 connection.Open();
                 using (var sqlCmd = new NpgsqlCommand(query, connection))
                 {
-                    modified = (int)await sqlCmd.ExecuteScalarAsync();
+                    try
+                    {
+                        await sqlCmd.ExecuteNonQueryAsync();
+                        modified++;
+                    }
+                    catch (PostgresException ex)
+                    {
+                        throw new StorageProviderException(nameof(PostgresqlStorageProvider), "Error creating database table schema! See inner exception for details.", ex);
+                    }
                 }
                 connection.Close();
             }
@@ -648,7 +671,7 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
             var modified = 0;
             foreach (var partType in defaultPartTypes.EnumValues)
             {
-                query += @$"INSERT INTO dbo.""PartTypes"" (""Name"", ""DateCreatedUtc"") VALUES('{partType.Value}', GETUTCDATE());\r\n";
+                query += $"INSERT INTO dbo.{Quote("PartTypes")} ({Quote("Name")}, {Quote("DateCreatedUtc")}) VALUES('{partType.Value}', timezone('utc'::text, now()));\r\n";
             }
             using (var connection = new NpgsqlConnection(_config.ConnectionString))
             {
@@ -665,9 +688,11 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
         private string GetMasterDbConnectionString(string connectionString)
         {
             var builder = new NpgsqlConnectionStringBuilder(connectionString);
-            builder.Database = "master";
+            builder.Database = "postgres";
             return builder.ToString();
         }
+
+        private string Quote(string txt) => PostgresqlServerSchemaGenerator<IBinnerDb>.Quote(txt);
 
         public void Dispose()
         {
