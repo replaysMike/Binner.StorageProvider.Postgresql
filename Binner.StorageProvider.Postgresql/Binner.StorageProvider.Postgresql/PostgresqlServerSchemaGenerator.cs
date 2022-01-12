@@ -130,7 +130,7 @@ increment 1;
         private string CreateTableIfNotExists(string tableName, string tableSchema, List<string> postSchemaText)
         {
             var createTable = $@"CREATE TABLE IF NOT EXISTS dbo.{Quote(tableName)} (
-{tableSchema}
+    {tableSchema}
 ";
             if (postSchemaText.Any())
                 createTable += $"{string.Join("\r\n", postSchemaText)}";

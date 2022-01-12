@@ -105,8 +105,8 @@ OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             part.UserId = userContext?.UserId;
             var query =
 $@"INSERT INTO dbo.""Parts"" (""Quantity"", ""LowStockThreshold"", ""PartNumber"", ""PackageType"", ""MountingTypeId"", ""DigiKeyPartNumber"", ""MouserPartNumber"", ""Description"", ""PartTypeId"", ""ProjectId"", ""Keywords"", ""DatasheetUrl"", ""Location"", ""BinNumber"", ""BinNumber2"", ""UserId"", ""Cost"", ""Manufacturer"", ""ManufacturerPartNumber"", ""LowestCostSupplier"", ""LowestCostSupplierUrl"", ""ProductUrl"", ""ImageUrl"", ""DateCreatedUtc"") 
-output INSERTED.""PartId""
-VALUES(@Quantity, @LowStockThreshold, @PartNumber, @PackageType, @MountingTypeId, @DigiKeyPartNumber, @MouserPartNumber, @Description, @PartTypeId, @ProjectId, @Keywords, @DatasheetUrl, @Location, @BinNumber, @BinNumber2, @UserId, @Cost, @Manufacturer, @ManufacturerPartNumber, @LowestCostSupplier, @LowestCostSupplierUrl, @ProductUrl, @ImageUrl, @DateCreatedUtc);
+VALUES(@Quantity, @LowStockThreshold, @PartNumber, @PackageType, @MountingTypeId, @DigiKeyPartNumber, @MouserPartNumber, @Description, @PartTypeId, @ProjectId, @Keywords, @DatasheetUrl, @Location, @BinNumber, @BinNumber2, @UserId, @Cost, @Manufacturer, @ManufacturerPartNumber, @LowestCostSupplier, @LowestCostSupplierUrl, @ProductUrl, @ImageUrl, @DateCreatedUtc)
+RETURNING ""PartId"";
 ";
             return await InsertAsync<Part, long>(query, part, (x, key) => { x.PartId = key; });
         }
@@ -116,8 +116,8 @@ VALUES(@Quantity, @LowStockThreshold, @PartNumber, @PackageType, @MountingTypeId
             project.UserId = userContext?.UserId;
             var query =
 $@"INSERT INTO dbo.""Projects"" (Name, Description, Location, Color, UserId, DateCreatedUtc) 
-output INSERTED.""ProjectId""
-VALUES(@Name, @Description, @Location, @Color, @UserId, @DateCreatedUtc);
+VALUES(@Name, @Description, @Location, @Color, @UserId, @DateCreatedUtc)
+RETURNING ""ProjectId"";;
 ";
             return await InsertAsync<Project, long>(query, project, (x, key) => { x.ProjectId = key; });
         }
@@ -150,41 +150,41 @@ VALUES(@Name, @Description, @Location, @Color, @UserId, @DateCreatedUtc);
 $@"WITH ""PartsExactMatch"" (""PartId"", ""Rank"") AS
 (
 SELECT ""PartId"", 10 as ""Rank"" FROM dbo.""Parts"" WHERE (@UserId IS NULL OR ""UserId"" = @UserId) AND 
-""PartNumber"" = @Keywords 
-OR ""DigiKeyPartNumber"" = @Keywords 
-OR ""MouserPartNumber"" = @Keywords
-OR ""ManufacturerPartNumber"" = @Keywords
-OR ""Description"" = @Keywords 
-OR ""Keywords"" = @Keywords 
-OR ""Location"" = @Keywords 
-OR ""BinNumber"" = @Keywords 
-OR ""BinNumber2"" = @Keywords
+""PartNumber"" ILIKE @Keywords 
+OR ""DigiKeyPartNumber"" ILIKE @Keywords 
+OR ""MouserPartNumber"" ILIKE @Keywords
+OR ""ManufacturerPartNumber"" ILIKE @Keywords
+OR ""Description"" ILIKE @Keywords 
+OR ""Keywords"" ILIKE @Keywords 
+OR ""Location"" ILIKE @Keywords 
+OR ""BinNumber"" ILIKE @Keywords 
+OR ""BinNumber2"" ILIKE @Keywords
 ),
 ""PartsBeginsWith"" (""PartId"", ""Rank"") AS
 (
 SELECT ""PartId"", 100 as ""Rank"" FROM dbo.""Parts"" WHERE (@UserId IS NULL OR ""UserId"" = @UserId) AND 
-""PartNumber"" LIKE @Keywords + '%'
-OR ""DigiKeyPartNumber"" LIKE @Keywords + '%'
-OR ""MouserPartNumber"" LIKE @Keywords + '%'
-OR ""ManufacturerPartNumber"" LIKE @Keywords + '%'
-OR ""Description"" LIKE @Keywords + '%'
-OR ""Keywords"" LIKE @Keywords + '%'
-OR ""Location"" LIKE @Keywords + '%'
-OR ""BinNumber"" LIKE @Keywords + '%'
-OR ""BinNumber2"" LIKE @Keywords+ '%'
+""PartNumber"" ILIKE CONCAT(@Keywords, '%')
+OR ""DigiKeyPartNumber"" ILIKE CONCAT(@Keywords, '%')
+OR ""MouserPartNumber"" ILIKE CONCAT(@Keywords, '%')
+OR ""ManufacturerPartNumber"" ILIKE CONCAT(@Keywords, '%')
+OR ""Description"" ILIKE CONCAT(@Keywords, '%')
+OR ""Keywords"" ILIKE CONCAT(@Keywords, '%')
+OR ""Location"" ILIKE CONCAT(@Keywords, '%')
+OR ""BinNumber"" ILIKE CONCAT(@Keywords, '%')
+OR ""BinNumber2"" ILIKE CONCAT(@Keywords, '%')
 ),
 ""PartsAny"" (""PartId"", ""Rank"") AS
 (
 SELECT ""PartId"", 200 as ""Rank"" FROM dbo.""Parts"" WHERE (@UserId IS NULL OR ""UserId"" = @UserId) AND 
-""PartNumber"" LIKE '%' + @Keywords + '%'
-OR ""DigiKeyPartNumber"" LIKE '%' + @Keywords + '%'
-OR ""MouserPartNumber"" LIKE '%' + @Keywords + '%'
-OR ""ManufacturerPartNumber"" LIKE '%' + @Keywords + '%'
-OR ""Description"" LIKE '%' + @Keywords + '%'
-OR ""Keywords"" LIKE '%' + @Keywords + '%'
-OR ""Location"" LIKE '%' + @Keywords + '%'
-OR ""BinNumber"" LIKE '%' + @Keywords + '%'
-OR ""BinNumber2"" LIKE '%' + @Keywords + '%'
+""PartNumber"" ILIKE CONCAT('%', @Keywords, '%')
+OR ""DigiKeyPartNumber"" ILIKE CONCAT('%', @Keywords, '%')
+OR ""MouserPartNumber"" ILIKE CONCAT('%', @Keywords, '%')
+OR ""ManufacturerPartNumber"" ILIKE CONCAT('%', @Keywords, '%')
+OR ""Description"" ILIKE CONCAT('%', @Keywords, '%')
+OR ""Keywords"" ILIKE CONCAT('%', @Keywords, '%')
+OR ""Location"" ILIKE CONCAT('%', @Keywords, '%')
+OR ""BinNumber"" ILIKE CONCAT('%', @Keywords, '%')
+OR ""BinNumber2"" ILIKE CONCAT('%', @Keywords, '%')
 ),
 ""PartsMerged"" (""PartId"", ""Rank"") AS
 (
