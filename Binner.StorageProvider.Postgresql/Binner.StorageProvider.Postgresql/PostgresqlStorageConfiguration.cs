@@ -1,4 +1,6 @@
-﻿namespace Binner.StorageProvider.Postgresql
+﻿using System.Collections.Generic;
+
+namespace Binner.StorageProvider.Postgresql
 {
     internal class PostgresqlStorageConfiguration
     {
