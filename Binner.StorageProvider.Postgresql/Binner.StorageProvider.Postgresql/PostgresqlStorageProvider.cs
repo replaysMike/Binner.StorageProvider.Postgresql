@@ -9,6 +9,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using TypeSupport;
 using TypeSupport.Extensions;
+using static Binner.Model.Common.SystemDefaults;
 
 namespace Binner.StorageProvider.Postgresql
 {
@@ -712,7 +713,16 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
             var modified = 0;
             foreach (var partType in defaultPartTypes.EnumValues)
             {
-                query += $"INSERT INTO dbo.{Quote("PartTypes")} ({Quote("Name")}, {Quote("DateCreatedUtc")}) VALUES('{partType.Value}', timezone('utc'::text, now()));\r\n";
+                int? parentPartTypeId = null;
+                var partTypeEnum = (DefaultPartTypes)partType.Key;
+                var field = typeof(DefaultPartTypes).GetField(partType.Value);
+                if (field.IsDefined(typeof(ParentPartTypeAttribute), false))
+                {
+                    var customAttribute = Attribute.GetCustomAttribute(field, typeof(ParentPartTypeAttribute)) as ParentPartTypeAttribute;
+                    parentPartTypeId = (int)customAttribute.Parent;
+                }
+
+                query += $"INSERT INTO dbo.{Quote("PartTypes")} ({Quote("Name")}, {Quote("ParentPartTypeId")}, {Quote("DateCreatedUtc")}) VALUES('{partType.Value}', {parentPartTypeId?.ToString() ?? "null"}, timezone('utc'::text, now()));\r\n";
             }
             using (var connection = new NpgsqlConnection(_config.ConnectionString))
             {
