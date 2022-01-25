@@ -57,9 +57,16 @@ namespace Binner.StorageProvider.Postgresql
             };
         }
 
-        public async Task<long> GetPartsCountAsync(IUserContext userContext)
+        public async Task<long> GetUniquePartsCountAsync(IUserContext userContext)
         {
             var query = @$"SELECT COUNT(*) FROM dbo.""Parts"" WHERE (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
+            var result = await ExecuteScalarAsync<long>(query, new { UserId = userContext?.UserId });
+            return result;
+        }
+
+        public async Task<long> GetPartsCountAsync(IUserContext userContext)
+        {
+            var query = @$"SELECT SUM(""Quantity"") FROM dbo.""Parts"" WHERE (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
             var result = await ExecuteScalarAsync<long>(query, new { UserId = userContext?.UserId });
             return result;
         }
