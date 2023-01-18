@@ -92,7 +92,7 @@ namespace Binner.StorageProvider.Postgresql
                 UserId = userContext?.UserId
             };
             var countQuery = $"SELECT COUNT(*) FROM dbo.\"Parts\" WHERE \"Quantity\" <= \"LowStockThreshold\" AND (@UserId::integer IS NULL OR \"UserId\" = @UserId);";
-            var totalPages = await ExecuteScalarAsync<int>(countQuery, parameters);
+            var totalItems = await ExecuteScalarAsync<int>(countQuery, parameters);
 
             var query =
 $@"SELECT * FROM dbo.""Parts""
@@ -115,7 +115,7 @@ CASE WHEN @OrderBy = 'ManufacturerPartNumber' THEN ""ManufacturerPartNumber"" EL
 CASE WHEN @OrderBy = 'DateCreatedUtc' THEN ""DateCreatedUtc"" ELSE NULL END {sortDirection} 
 OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             var result = await SqlQueryAsync<Part>(query, parameters);
-            return new PaginatedResponse<Part>(totalPages, result);
+            return new PaginatedResponse<Part>(totalItems, request.Results, request.Page, result);
         }
 
         public async Task<Part> AddPartAsync(Part part, IUserContext userContext)
@@ -313,7 +313,7 @@ RETURNING ""PartTypeId"";";
             };
 
             var countQuery = $"SELECT COUNT(*) FROM dbo.\"Parts\" WHERE (@UserId::integer IS NULL OR \"UserId\" = @UserId) {binFilter};";
-            var totalPages = await ExecuteScalarAsync<int>(countQuery, parameters);
+            var totalItems = await ExecuteScalarAsync<int>(countQuery, parameters);
 
             var query =
 $@"SELECT * FROM dbo.""Parts""
@@ -336,7 +336,7 @@ CASE WHEN @OrderBy = 'ManufacturerPartNumber' THEN ""ManufacturerPartNumber"" EL
 CASE WHEN @OrderBy = 'DateCreatedUtc' THEN ""DateCreatedUtc"" ELSE NULL END {sortDirection} 
 OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             var result = await SqlQueryAsync<Part>(query, parameters);
-            return new PaginatedResponse<Part>(totalPages, result.ToList());
+            return new PaginatedResponse<Part>(totalItems, request.Results, request.Page, result.ToList());
         }
 
         public async Task<PartType> GetPartTypeAsync(long partTypeId, IUserContext userContext)
