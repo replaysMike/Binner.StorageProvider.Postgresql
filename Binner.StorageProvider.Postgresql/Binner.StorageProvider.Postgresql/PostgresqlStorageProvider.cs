@@ -1,12 +1,8 @@
 ﻿using Binner.Model.Common;
 using Npgsql;
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlTypes;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using TypeSupport;
 using TypeSupport.Extensions;
 using static Binner.Model.Common.SystemDefaults;
@@ -92,7 +88,7 @@ namespace Binner.StorageProvider.Postgresql
                 UserId = userContext?.UserId
             };
             var countQuery = $"SELECT COUNT(*) FROM dbo.\"Parts\" WHERE \"Quantity\" <= \"LowStockThreshold\" AND (@UserId::integer IS NULL OR \"UserId\" = @UserId);";
-            var totalItems = await ExecuteScalarAsync<int>(countQuery, parameters);
+            var totalItems = await ExecuteScalarAsync<long>(countQuery, parameters);
 
             var query =
 $@"SELECT * FROM dbo.""Parts""
@@ -115,7 +111,7 @@ CASE WHEN @OrderBy = 'ManufacturerPartNumber' THEN ""ManufacturerPartNumber"" EL
 CASE WHEN @OrderBy = 'DateCreatedUtc' THEN ""DateCreatedUtc"" ELSE NULL END {sortDirection} 
 OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             var result = await SqlQueryAsync<Part>(query, parameters);
-            return new PaginatedResponse<Part>(totalItems, request.Results, request.Page, result);
+            return new PaginatedResponse<Part>((int)totalItems, request.Results, request.Page, result);
         }
 
         public async Task<Part> AddPartAsync(Part part, IUserContext userContext)
@@ -300,7 +296,7 @@ RETURNING ""PartTypeId"";";
 
             if (request.By != null)
             {
-                binFilter = $" AND {request.By} = '{request.Value}'";
+                binFilter = $@" AND {Quote(request.By[0].ToString().ToUpper() + request.By.Substring(1))} = '{request.Value}'";
             }
 
             var parameters = new
@@ -313,7 +309,7 @@ RETURNING ""PartTypeId"";";
             };
 
             var countQuery = $"SELECT COUNT(*) FROM dbo.\"Parts\" WHERE (@UserId::integer IS NULL OR \"UserId\" = @UserId) {binFilter};";
-            var totalItems = await ExecuteScalarAsync<int>(countQuery, parameters);
+            var totalItems = await ExecuteScalarAsync<long>(countQuery, parameters);
 
             var query =
 $@"SELECT * FROM dbo.""Parts""
@@ -336,7 +332,7 @@ CASE WHEN @OrderBy = 'ManufacturerPartNumber' THEN ""ManufacturerPartNumber"" EL
 CASE WHEN @OrderBy = 'DateCreatedUtc' THEN ""DateCreatedUtc"" ELSE NULL END {sortDirection} 
 OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             var result = await SqlQueryAsync<Part>(query, parameters);
-            return new PaginatedResponse<Part>(totalItems, request.Results, request.Page, result.ToList());
+            return new PaginatedResponse<Part>((int)totalItems, request.Results, request.Page, result.ToList());
         }
 
         public async Task<PartType> GetPartTypeAsync(long partTypeId, IUserContext userContext)
