@@ -60,7 +60,7 @@ namespace Binner.StorageProvider.Postgresql
             {
                 using var connection = new NpgsqlConnection(_config.ConnectionString);
                 connection.Open();
-                using var sqlCmd = new NpgsqlCommand($"SELECT 1 FROM pg_database WHERE datname='{_databaseName}'", connection);
+                using var sqlCmd = new NpgsqlCommand($"SELECT CAST(1 as int) FROM pg_database WHERE datname='{_databaseName}'", connection);
                 var dbId = (int?)await sqlCmd.ExecuteScalarAsync();
                 return new ConnectionResponse { IsSuccess = true, DatabaseExists = dbId != null, Errors = new List<string>() };
             }
