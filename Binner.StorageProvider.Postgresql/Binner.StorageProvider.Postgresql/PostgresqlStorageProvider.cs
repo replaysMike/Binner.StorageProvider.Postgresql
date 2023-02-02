@@ -24,7 +24,7 @@ namespace Binner.StorageProvider.Postgresql
             _config = new PostgresqlStorageConfiguration(config);
             try
             {
-                GenerateDatabaseIfNotExistsAsync<IBinnerDb>()
+                GenerateDatabaseIfNotExistsAsync<BinnerDbV2>()
                     .GetAwaiter()
                     .GetResult();
             }

@@ -88,10 +88,13 @@ namespace Binner.StorageProvider.Postgresql
                         columnSchema += "timestamp";
                         break;
                     case var p when p.NullableBaseType == typeof(TimeSpan):
-                        columnSchema = "interval";
+                        columnSchema += "interval";
                         break;
                     case var p when p.NullableBaseType == typeof(byte[]):
-                        columnSchema = "bytea";
+                        columnSchema += "bytea";
+                        break;
+                    case var p when p.NullableBaseType.IsEnum:
+                        columnSchema += "integer";
                         break;
                     default:
                         throw new StorageProviderException($"Unsupported data type: {prop.Type}");
