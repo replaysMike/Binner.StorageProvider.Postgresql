@@ -90,6 +90,12 @@ namespace Binner.StorageProvider.Postgresql
                     case var p when p.NullableBaseType == typeof(TimeSpan):
                         columnSchema += "interval";
                         break;
+                    case var p when p.NullableBaseType == typeof(Guid):
+                        columnSchema += "uuid";
+                        break;
+                    case var p when p.NullableBaseType == typeof(bool):
+                        columnSchema += "boolean";
+                        break;
                     case var p when p.NullableBaseType == typeof(byte[]):
                         columnSchema += "bytea";
                         break;

@@ -566,6 +566,75 @@ OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             return storedFile;
         }
 
+        public async Task<OAuthAuthorization> CreateOAuthRequestAsync(OAuthAuthorization authRequest, IUserContext userContext)
+        {
+            var oAuthRequest = new OAuthRequest
+            {
+                AuthorizationCode = authRequest.AuthorizationCode,
+                AuthorizationReceived = authRequest.AuthorizationReceived,
+                Error = authRequest.Error,
+                ErrorDescription = authRequest.ErrorDescription,
+                Provider = authRequest.Provider,
+                RequestId = authRequest.Id,
+                ReturnToUrl = authRequest.ReturnToUrl,
+                UserId = userContext?.UserId,
+                DateCreatedUtc = DateTime.UtcNow,
+                DateModifiedUtc = DateTime.UtcNow
+            };
+            var query =
+$@"INSERT INTO dbo.""OAuthRequests"" (""AuthorizationCode"", ""AuthorizationReceived"", ""Error"", ""ErrorDescription"", ""Provider"", ""RequestId"", ""ReturnToUrl"", ""UserId"", ""DateCreatedUtc"", ""DateModifiedUtc"") 
+VALUES(@AuthorizationCode, @AuthorizationReceived, @Error, @ErrorDescription, @Provider, @RequestId, @ReturnToUrl, @UserId, @DateCreatedUtc, @DateModifiedUtc)
+RETURNING ""OAuthRequestId"";
+";
+            var createdOAuthRequest = await InsertAsync<OAuthRequest, int>(query, oAuthRequest, (x, key) => { x.OAuthRequestId = key; });
+            return authRequest;
+        }
+
+        public async Task<OAuthAuthorization> UpdateOAuthRequestAsync(OAuthAuthorization authRequest, IUserContext userContext)
+        {
+            var oAuthRequest = new OAuthRequest
+            {
+                AuthorizationCode = authRequest.AuthorizationCode,
+                AuthorizationReceived = authRequest.AuthorizationReceived,
+                Error = authRequest.Error,
+                ErrorDescription = authRequest.ErrorDescription,
+                Provider = authRequest.Provider,
+                RequestId = authRequest.Id,
+                ReturnToUrl = authRequest.ReturnToUrl,
+                UserId = userContext?.UserId,
+                DateModifiedUtc = DateTime.UtcNow
+            };
+            var query = @$"SELECT ""OAuthRequestId"" FROM dbo.""OAuthRequests"" WHERE ""Provider"" = @Provider AND ""RequestId"" = @RequestId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
+            var result = await SqlQueryAsync<OAuthRequest>(query, oAuthRequest);
+            if (result.Any())
+            {
+                query = @$"UPDATE dbo.""OAuthRequests"" SET ""AuthorizationCode"" = @AuthorizationCode, ""AuthorizationReceived"" = @AuthorizationReceived, ""Error"" = @Error, ""ErrorDescription"" = @ErrorDescription, ""DateModifiedUtc"" = @DateModifiedUtc WHERE ""Provider"" = @Provider AND ""RequestId"" = @RequestId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
+                await ExecuteAsync(query, oAuthRequest);
+            }
+            else
+            {
+                throw new StorageProviderException(nameof(PostgresqlStorageProvider), $"Record not found for {nameof(OAuthRequest)} = (Provider: {oAuthRequest.Provider}, RequestId: {oAuthRequest.RequestId})");
+            }
+            return authRequest;
+        }
+
+        public async Task<OAuthAuthorization?> GetOAuthRequestAsync(Guid requestId, IUserContext userContext)
+        {
+            var query = @$"SELECT * FROM dbo.""OAuthRequests"" WHERE ""RequestId"" = @RequestId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
+            var result = await SqlQueryAsync<OAuthRequest>(query, new { RequestId = requestId, UserId = userContext?.UserId });
+            var oAuthRequest = result.FirstOrDefault();
+            if (oAuthRequest == null) return null;
+
+            return new OAuthAuthorization(oAuthRequest.Provider, oAuthRequest.RequestId)
+            {
+                UserId = userContext?.UserId,
+                Error = oAuthRequest.Error,
+                ErrorDescription = oAuthRequest.ErrorDescription,
+                AuthorizationReceived = false,
+                ReturnToUrl = oAuthRequest.ReturnToUrl ?? string.Empty,
+            };
+        }
+
         private async Task<T> InsertAsync<T, TKey>(string query, T parameters, Action<T, TKey> keySetter)
         {
             using (var connection = new NpgsqlConnection(_config.ConnectionString))
