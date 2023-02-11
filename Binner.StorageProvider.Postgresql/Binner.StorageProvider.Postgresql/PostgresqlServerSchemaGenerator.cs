@@ -128,17 +128,6 @@ increment 1;
 
         internal static string Quote(string txt) => @$"""{txt}""";
 
-        private string GetMaxLength(ExtendedProperty prop)
-        {
-            var maxLengthAttr = prop.CustomAttributes.ToList().FirstOrDefault(x => x.AttributeType == typeof(MaxLengthAttribute));
-            var maxLength = "max";
-            if (maxLengthAttr != null)
-            {
-                maxLength = maxLengthAttr.ConstructorArguments.First().Value.ToString();
-            }
-            return maxLength;
-        }
-
         private string CreateTableIfNotExists(string tableName, string tableSchema, List<string> postSchemaText)
         {
             var createTable = $@"CREATE TABLE IF NOT EXISTS dbo.{Quote(tableName)} (

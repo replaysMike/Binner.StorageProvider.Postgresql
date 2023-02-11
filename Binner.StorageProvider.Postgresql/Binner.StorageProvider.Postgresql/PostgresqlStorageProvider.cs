@@ -25,7 +25,7 @@ namespace Binner.StorageProvider.Postgresql
             _config = new PostgresqlStorageConfiguration(config);
             try
             {
-                GenerateDatabaseIfNotExistsAsync<BinnerDbV2>()
+                GenerateDatabaseIfNotExistsAsync<BinnerDbV3>()
                     .GetAwaiter()
                     .GetResult();
             }
@@ -241,14 +241,14 @@ INNER JOIN (
             return result;
         }
 
-        public async Task<OAuthCredential> GetOAuthCredentialAsync(string providerName, IUserContext userContext)
+        public async Task<OAuthCredential?> GetOAuthCredentialAsync(string providerName, IUserContext userContext)
         {
             var query = @$"SELECT * FROM dbo.""OAuthCredentials"" WHERE ""Provider"" = @ProviderName AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<OAuthCredential>(query, new { ProviderName = providerName, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
-        public async Task<PartType> GetOrCreatePartTypeAsync(PartType partType, IUserContext userContext)
+        public async Task<PartType?> GetOrCreatePartTypeAsync(PartType partType, IUserContext userContext)
         {
             partType.UserId = userContext?.UserId;
             var query = @$"SELECT ""PartTypeId"" FROM dbo.""PartTypes"" WHERE ""Name"" = @Name AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
@@ -275,14 +275,14 @@ RETURNING ""PartTypeId"";";
             return result.ToList();
         }
 
-        public async Task<Part> GetPartAsync(long partId, IUserContext userContext)
+        public async Task<Part?> GetPartAsync(long partId, IUserContext userContext)
         {
             var query = @$"SELECT * FROM dbo.""Parts"" WHERE ""PartId"" = @PartId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Part>(query, new { PartId = partId, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
-        public async Task<Part> GetPartAsync(string partNumber, IUserContext userContext)
+        public async Task<Part?> GetPartAsync(string partNumber, IUserContext userContext)
         {
             var query = @$"SELECT * FROM dbo.""Parts"" WHERE ""PartNumber"" = @PartNumber AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Part>(query, new { PartNumber = partNumber, UserId = userContext?.UserId });
@@ -352,21 +352,21 @@ OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
             return new PaginatedResponse<Part>((int)totalItems, request.Results, request.Page, result.ToList());
         }
 
-        public async Task<PartType> GetPartTypeAsync(long partTypeId, IUserContext userContext)
+        public async Task<PartType?> GetPartTypeAsync(long partTypeId, IUserContext userContext)
         {
             var query = @$"SELECT * FROM dbo.""PartTypes"" WHERE ""PartTypeId"" = @PartTypeId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<PartType>(query, new { PartTypeId = partTypeId, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
-        public async Task<Project> GetProjectAsync(long projectId, IUserContext userContext)
+        public async Task<Project?> GetProjectAsync(long projectId, IUserContext userContext)
         {
             var query = @$"SELECT * FROM dbo.""Projects"" WHERE ""ProjectId"" = @ProjectId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Project>(query, new { ProjectId = projectId, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
-        public async Task<Project> GetProjectAsync(string projectName, IUserContext userContext)
+        public async Task<Project?> GetProjectAsync(string projectName, IUserContext userContext)
         {
             var query = @$"SELECT * FROM dbo.""Projects"" WHERE ""Name"" = @Name AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<Project>(query, new { Name = projectName, UserId = userContext?.UserId });
@@ -493,14 +493,14 @@ RETURNING ""StoredFileId"";
             return await InsertAsync<StoredFile, long>(query, storedFile, (x, key) => { x.StoredFileId = key; });
         }
 
-        public async Task<StoredFile> GetStoredFileAsync(long storedFileId, IUserContext userContext)
+        public async Task<StoredFile?> GetStoredFileAsync(long storedFileId, IUserContext userContext)
         {
             var query = @$"SELECT * FROM dbo.""StoredFiles"" WHERE ""StoredFileId"" = @StoredFileId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<StoredFile>(query, new { StoredFileId = storedFileId, UserId = userContext?.UserId });
             return result.FirstOrDefault();
         }
 
-        public async Task<StoredFile> GetStoredFileAsync(string filename, IUserContext userContext)
+        public async Task<StoredFile?> GetStoredFileAsync(string filename, IUserContext userContext)
         {
             var query = @$"SELECT * FROM dbo.""StoredFiles"" WHERE ""Filename"" = @Filename AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
             var result = await SqlQueryAsync<StoredFile>(query, new { Filename = filename, UserId = userContext?.UserId });
@@ -653,7 +653,7 @@ RETURNING ""OAuthRequestId"";
             return parameters;
         }
 
-        private async Task<ICollection<T>> SqlQueryAsync<T>(string query, object parameters = null)
+        private async Task<ICollection<T>> SqlQueryAsync<T>(string query, object? parameters = null)
         {
             var results = new List<T>();
             var type = typeof(T).GetExtendedType();
@@ -685,7 +685,7 @@ RETURNING ""OAuthRequestId"";
             return results;
         }
 
-        private async Task<T> ExecuteScalarAsync<T>(string query, object parameters = null)
+        private async Task<T> ExecuteScalarAsync<T>(string query, object? parameters = null)
         {
             T result;
             using (var connection = new NpgsqlConnection(_config.ConnectionString))
@@ -793,7 +793,7 @@ RETURNING ""OAuthRequestId"";
             throw new StorageProviderException(nameof(PostgresqlStorageProvider), $"No database type mapping available for type '{type.Type}'");
         }
 
-        private static object MapToPropertyValue(object obj, Type destinationType)
+        private static object? MapToPropertyValue(object? obj, Type destinationType)
         {
             if (obj == DBNull.Value) return null;
 
@@ -808,7 +808,7 @@ RETURNING ""OAuthRequestId"";
             }
         }
 
-        private static object MapFromPropertyValue(object obj)
+        private static object? MapFromPropertyValue(object? obj)
         {
             if (obj == null) return DBNull.Value;
 
@@ -833,7 +833,7 @@ RETURNING ""OAuthRequestId"";
             _databaseName = !string.IsNullOrEmpty(connectionStringBuilder.Database) ? connectionStringBuilder.Database : "Binner";
             var schemaGenerator = new PostgresqlServerSchemaGenerator<T>(_databaseName);
             var modified = 0;
-            var partTypesCount = 0l;
+            var partTypesCount = 0L;
 
             // Ensure database exists
             var query = schemaGenerator.CreateDatabaseIfNotExists();
@@ -873,7 +873,7 @@ RETURNING ""OAuthRequestId"";
                 // if seed data is missing, run the initial seed
                 using (var sqlCmd = new NpgsqlCommand($"SELECT COUNT(*) FROM dbo.{Quote("PartTypes")}", connection))
                 {
-                    partTypesCount = (long)await sqlCmd.ExecuteScalarAsync();
+                    partTypesCount = (long)(await sqlCmd.ExecuteScalarAsync() ?? 0L);
                 }
                 connection.Close();
             }
