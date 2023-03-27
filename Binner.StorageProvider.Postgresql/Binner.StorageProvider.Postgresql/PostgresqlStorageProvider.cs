@@ -528,8 +528,8 @@ RETURNING ""StoredFileId"";
 
         public async Task<ICollection<StoredFile>> GetStoredFilesAsync(long partId, StoredFileType? fileType, IUserContext? userContext)
         {
-            var query = $@"SELECT * FROM dbo.""StoredFiles"" WHERE ""PartId"" = @PartId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
-            var result = await SqlQueryAsync<StoredFile>(query, new { PartId = partId, UserId = userContext?.UserId });
+            var query = $@"SELECT * FROM dbo.""StoredFiles"" WHERE ""PartId"" = @PartId AND (@StoredFileType IS NULL OR ""StoredFileType"" = @StoredFileType) AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
+            var result = await SqlQueryAsync<StoredFile>(query, new { PartId = partId, StoredFileType = fileType, UserId = userContext?.UserId });
             return result;
         }
 
@@ -1159,6 +1159,9 @@ RETURNING ""PartSupplierId"";
                 { typeof(byte[]), DbType.Binary },
             };
 
+            if (type.IsNullable && type.NullableBaseType.IsEnum)
+                return @switch[typeof(int?)];
+
             if (type.Type.IsEnum)
                 return type.IsNullable ? @switch[typeof(int?)] : @switch[typeof(int)];
 
@@ -1197,6 +1200,8 @@ RETURNING ""PartSupplierId"";
                     if (((DateTime)obj) == DateTime.MinValue)
                         return SqlDateTime.MinValue.Value;
                     return obj;
+                case var e when e.IsEnum:
+                    return Convert.ChangeType(obj, typeof(int));
                 default:
                     return obj;
             }
