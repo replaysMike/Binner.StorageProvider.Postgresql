@@ -25,7 +25,7 @@ namespace Binner.StorageProvider.Postgresql
             _config = new PostgresqlStorageConfiguration(config);
             try
             {
-                GenerateDatabaseIfNotExistsAsync<BinnerDbV6>()
+                GenerateDatabaseIfNotExistsAsync<BinnerDbV7>()
                     .GetAwaiter()
                     .GetResult();
             }
@@ -42,7 +42,7 @@ namespace Binner.StorageProvider.Postgresql
         public async Task<IBinnerDb> GetDatabaseAsync(IUserContext? userContext)
         {
             var parts = await GetPartsAsync();
-            return new BinnerDbV6
+            return new BinnerDbV7
             {
                 OAuthCredentials = await GetOAuthCredentialAsync(userContext),
                 Parts = parts,
@@ -143,8 +143,8 @@ OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
         {
             part.UserId = userContext?.UserId;
             var query =
-$@"INSERT INTO dbo.""Parts"" (""Quantity"", ""LowStockThreshold"", ""PartNumber"", ""PackageType"", ""MountingTypeId"", ""DigiKeyPartNumber"", ""MouserPartNumber"", ""Description"", ""PartTypeId"", ""ProjectId"", ""Keywords"", ""DatasheetUrl"", ""Location"", ""BinNumber"", ""BinNumber2"", ""UserId"", ""Cost"", ""Manufacturer"", ""ManufacturerPartNumber"", ""LowestCostSupplier"", ""LowestCostSupplierUrl"", ""ProductUrl"", ""ImageUrl"", ""DateCreatedUtc"", ""ArrowPartNumber"") 
-VALUES(@Quantity, @LowStockThreshold, @PartNumber, @PackageType, @MountingTypeId, @DigiKeyPartNumber, @MouserPartNumber, @Description, @PartTypeId, @ProjectId, @Keywords, @DatasheetUrl, @Location, @BinNumber, @BinNumber2, @UserId, @Cost, @Manufacturer, @ManufacturerPartNumber, @LowestCostSupplier, @LowestCostSupplierUrl, @ProductUrl, @ImageUrl, @DateCreatedUtc, @ArrowPartNumber)
+$@"INSERT INTO dbo.""Parts"" (""Quantity"", ""LowStockThreshold"", ""PartNumber"", ""PackageType"", ""MountingTypeId"", ""DigiKeyPartNumber"", ""MouserPartNumber"", ""Description"", ""PartTypeId"", ""ProjectId"", ""Keywords"", ""DatasheetUrl"", ""Location"", ""BinNumber"", ""BinNumber2"", ""UserId"", ""Cost"", ""Manufacturer"", ""ManufacturerPartNumber"", ""LowestCostSupplier"", ""LowestCostSupplierUrl"", ""ProductUrl"", ""ImageUrl"", ""DateCreatedUtc"", ""ArrowPartNumber"", ""Currency"") 
+VALUES(@Quantity, @LowStockThreshold, @PartNumber, @PackageType, @MountingTypeId, @DigiKeyPartNumber, @MouserPartNumber, @Description, @PartTypeId, @ProjectId, @Keywords, @DatasheetUrl, @Location, @BinNumber, @BinNumber2, @UserId, @Cost, @Manufacturer, @ManufacturerPartNumber, @LowestCostSupplier, @LowestCostSupplierUrl, @ProductUrl, @ImageUrl, @DateCreatedUtc, @ArrowPartNumber, @Currency)
 RETURNING ""PartId"";
 ";
             return await InsertAsync<Part, long>(query, part, (x, key) => { x.PartId = key; });
@@ -450,7 +450,7 @@ VALUES (@Provider, @AccessToken, @RefreshToken, @DateCreatedUtc, @DateExpiresUtc
             var result = await SqlQueryAsync<Part>(query, part);
             if (result.Any())
             {
-                query = $@"UPDATE dbo.""Parts"" SET ""Quantity"" = @Quantity, ""LowStockThreshold"" = @LowStockThreshold, ""Cost"" = @Cost, ""PartNumber"" = @PartNumber, ""PackageType"" = @PackageType, ""MountingTypeId"" = @MountingTypeId, ""DigiKeyPartNumber"" = @DigiKeyPartNumber, ""MouserPartNumber"" = @MouserPartNumber, ""Description"" = @Description, ""PartTypeId"" = @PartTypeId, ""ProjectId"" = @ProjectId, ""Keywords"" = @Keywords, ""DatasheetUrl"" = @DatasheetUrl, ""Location"" = @Location, ""BinNumber"" = @BinNumber, ""BinNumber2"" = @BinNumber2, ""ProductUrl"" = @ProductUrl, ""ImageUrl"" = @ImageUrl, ""LowestCostSupplier"" = @LowestCostSupplier, ""LowestCostSupplierUrl"" = @LowestCostSupplierUrl, ""Manufacturer"" = @Manufacturer, ""ManufacturerPartNumber"" = @ManufacturerPartNumber, ""ArrowPartNumber"" = @ArrowPartNumber WHERE ""PartId"" = @PartId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
+                query = $@"UPDATE dbo.""Parts"" SET ""Quantity"" = @Quantity, ""LowStockThreshold"" = @LowStockThreshold, ""Cost"" = @Cost, ""PartNumber"" = @PartNumber, ""PackageType"" = @PackageType, ""MountingTypeId"" = @MountingTypeId, ""DigiKeyPartNumber"" = @DigiKeyPartNumber, ""MouserPartNumber"" = @MouserPartNumber, ""Description"" = @Description, ""PartTypeId"" = @PartTypeId, ""ProjectId"" = @ProjectId, ""Keywords"" = @Keywords, ""DatasheetUrl"" = @DatasheetUrl, ""Location"" = @Location, ""BinNumber"" = @BinNumber, ""BinNumber2"" = @BinNumber2, ""ProductUrl"" = @ProductUrl, ""ImageUrl"" = @ImageUrl, ""LowestCostSupplier"" = @LowestCostSupplier, ""LowestCostSupplierUrl"" = @LowestCostSupplierUrl, ""Manufacturer"" = @Manufacturer, ""ManufacturerPartNumber"" = @ManufacturerPartNumber, ""ArrowPartNumber"" = @ArrowPartNumber, ""Currency"" = @Currency WHERE ""PartId"" = @PartId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
                 await ExecuteAsync(query, part);
             }
             else
@@ -852,8 +852,8 @@ OFFSET {offsetRecords} ROWS FETCH NEXT {request.Results} ROWS ONLY;";
         {
             assignment.UserId = userContext?.UserId;
             var query =
-                $@"INSERT INTO dbo.""ProjectPartAssignments"" (""ProjectId"", ""PartId"", ""PcbId"", ""PartName"", ""Quantity"", ""Notes"", ""ReferenceId"", ""UserId"", ""DateCreatedUtc"", ""DateModifiedUtc"", ""QuantityAvailable"", ""SchematicReferenceId"", ""CustomDescription"") 
-VALUES(@ProjectId, @PartId, @PcbId, @PartName, @Quantity, @Notes, @ReferenceId, @UserId, @DateCreatedUtc, @DateModifiedUtc, @QuantityAvailable, @SchematicReferenceId, @CustomDescription)
+                $@"INSERT INTO dbo.""ProjectPartAssignments"" (""ProjectId"", ""PartId"", ""PcbId"", ""PartName"", ""Quantity"", ""Notes"", ""ReferenceId"", ""UserId"", ""DateCreatedUtc"", ""DateModifiedUtc"", ""QuantityAvailable"", ""SchematicReferenceId"", ""CustomDescription"", ""Cost"", ""Currency"") 
+VALUES(@ProjectId, @PartId, @PcbId, @PartName, @Quantity, @Notes, @ReferenceId, @UserId, @DateCreatedUtc, @DateModifiedUtc, @QuantityAvailable, @SchematicReferenceId, @CustomDescription, @Cost, @Currency)
 RETURNING ""ProjectPartAssignmentId"";
 ";
             return await InsertAsync<ProjectPartAssignment, long>(query, assignment, (x, key) => { x.ProjectPartAssignmentId = key; });
@@ -867,7 +867,7 @@ RETURNING ""ProjectPartAssignmentId"";
             var result = await SqlQueryAsync<ProjectPartAssignment>(query, assignment);
             if (result.Any())
             {
-                query = $@"UPDATE ""ProjectPartAssignments"" SET ""ProjectId"" = @ProjectId, ""PartId"" = @PartId, ""PcbId"" = @PcbId, ""PartName"" = @PartName, ""Quantity"" = @Quantity, ""Notes"" = @Notes, ""ReferenceId"" = @ReferenceId, ""DateModifiedUtc"" = @DateModifiedUtc, ""QuantityAvailable"" = @QuantityAvailable, ""SchematicReferenceId"" = @SchematicReferenceId, ""CustomDescription"" = @CustomDescription WHERE ""ProjectPartAssignmentId"" = @ProjectPartAssignmentId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
+                query = $@"UPDATE ""ProjectPartAssignments"" SET ""ProjectId"" = @ProjectId, ""PartId"" = @PartId, ""PcbId"" = @PcbId, ""PartName"" = @PartName, ""Quantity"" = @Quantity, ""Notes"" = @Notes, ""ReferenceId"" = @ReferenceId, ""DateModifiedUtc"" = @DateModifiedUtc, ""QuantityAvailable"" = @QuantityAvailable, ""SchematicReferenceId"" = @SchematicReferenceId, ""CustomDescription"" = @CustomDescription, ""Cost"" = @Cost, ""Currency"" = @Currency WHERE ""ProjectPartAssignmentId"" = @ProjectPartAssignmentId AND (@UserId::integer IS NULL OR ""UserId"" = @UserId);";
                 await ExecuteAsync(query, assignment);
             }
             else
